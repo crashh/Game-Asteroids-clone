@@ -5,29 +5,37 @@ import java.awt.image.BufferedImage;
 
 public class Asteroid {
 	
-	private double x, y, xVelocity, yVelocity, radius, rotate=0.4, randomValue;
-	int hitsLeft, numSplit, golddrop;
+	private double x;
+    private double y;
+    private final double xVelocity;
+    private final double yVelocity;
+    private final double radius;
+    private double rotate=0.4;
+    private double rotationValue;
+	private final int hitsLeft;
+    private final int numSplit;
+    final int goldDrop;
 	
 	//Used for gfx:
-	private BufferedImage asteroid1 = null;
-	private BufferedImage after = null;
-	
-	
-	public Asteroid(double x,double y,double radius,double minVelocity,
+	private BufferedImage asteroid = null;
+
+    public Asteroid(double x,double y,double radius,double minVelocity,
 					double maxVelocity,int hitsLeft,int numSplit, int gold, BufferedImage sprite){
-		asteroid1=sprite;
+		asteroid = sprite;
 		
 		this.x=x;
 		this.y=y;
 		this.radius=radius;
 		this.hitsLeft=hitsLeft;				//number of shots left to destroy it
 		this.numSplit=numSplit; 			//number of smaller asteroids it breaks up into when shot
-		this.golddrop=gold;
-		randomValue = Math.random() * ( 2 - 1 );
-		if (randomValue<0.5)
-			randomValue=0.0001;
+		this.goldDrop=gold;
+
+        //Randomizes the rotation speed
+		rotationValue = Math.random() * ( 2 - 1 );
+		if (rotationValue < 0.5)
+			rotationValue = 0.00015;
 		else
-			randomValue=-0.0001;
+			rotationValue = -0.00015;
 		
 		//Calculates a random direction and,
 		//a random velocity between minVelocity and maxVelocity:
@@ -40,7 +48,7 @@ public class Asteroid {
 	public void move(int scrnWidth, int scrnHeight){
 		x+=xVelocity; 
 		y+=yVelocity;
-		rotate+=randomValue;
+		rotate+= rotationValue;
 		
 		//Wrapping, edited to prevent asteroid wrapping too early:
 		if(x<0-radius)
@@ -56,9 +64,9 @@ public class Asteroid {
 	public void draw(Graphics g){
 		//Sets the proper image, setting size according to scale:
 				
-		int w = asteroid1.getWidth();
-		int h = asteroid1.getHeight();
-		after = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+		int w = asteroid.getWidth();
+		int h = asteroid.getHeight();
+        BufferedImage after = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
 		AffineTransform at = new AffineTransform();
 		
 		at.translate(0.5*h, 0.5*w);
@@ -66,12 +74,10 @@ public class Asteroid {
 		at.scale((radius/w)*2, (radius/h)*2);
 		at.translate(-0.5*w, -0.5*h);
 		AffineTransformOp op = new AffineTransformOp(at, AffineTransformOp.TYPE_BILINEAR);
-		after = op.filter(asteroid1, after);
+		after = op.filter(asteroid, after);
 	
 		//Draws the image:
-		g.drawImage(after, (int)(x-0.5*w), (int)(y-0.5*h), null);		
-		
-	
+		g.drawImage(after, (int)(x-0.5*w), (int)(y-0.5*h), null);
 	}
 	
 	public boolean shipCollision(Ship ship){
@@ -84,19 +90,17 @@ public class Asteroid {
 		// then they have collided.
 		// It does not check for collisions if the ship is not active
 		// (the player is waiting to start a new life or the game is paused).
-		if(Math.pow(radius+ship.getRadius(),2) > Math.pow(ship.getX()-x,2)+
-				Math.pow(ship.getY()-y,2) && ship.isActive())
-			return true;
-		return false;
-	}
+        return Math.pow(radius + ship.getRadius(), 2) > Math.pow(ship.getX() - x, 2) +
+                Math.pow(ship.getY() - y, 2) && ship.isActive();
+    }
 	
 	public boolean shotCollision(Shot shot){
 		// Same idea as shipCollision, but using shotRadius = 0
-		if(Math.pow(radius,2) > Math.pow(shot.getX()-x,2)+
-				Math.pow(shot.getY()-y,2))
-			return true;
-		return false;
-	}
+        return Math.pow(radius, 2) > Math.pow(shot.getX() - x, 2) +
+                Math.pow(shot.getY() - y, 2);
+    }
+
+
 	
 	public Asteroid createSplitAsteroid(double minVelocity,
 										double maxVelocity){
@@ -107,12 +111,12 @@ public class Asteroid {
 		//the area of this asteroid. Each smaller asteroid has one
 		//less hit left before being completely destroyed.
 		return new Asteroid(x,y,radius/Math.sqrt(numSplit),
-							minVelocity,maxVelocity,hitsLeft-1,numSplit, golddrop+2, asteroid1);
+							minVelocity,maxVelocity,hitsLeft-1,numSplit, goldDrop+2, asteroid);
 	}
 	
 	//Getters:
 	public int getHitsLeft(){
-		return hitsLeft;					//when 0, it dissapeers.
+		return hitsLeft;
 	}
 	
 	public int getNumSplit(){

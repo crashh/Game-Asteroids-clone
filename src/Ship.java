@@ -1,20 +1,33 @@
-import java.awt.*; 
+import java.applet.Applet;
+import java.applet.AudioClip;
+import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.net.URL;
 
 import javax.imageio.ImageIO;
 
-public class Ship { 
+class Ship {
 	//Radius of circle used to approximate the ship:
-	private final int radius=6; 
+	private final int radius=6;
 
 	//Variables used in movement:
-	private double x, y, angle, xVelocity, yVelocity, acceleration, velocityDecay, rotationalSpeed, ammo, max_ammo, immunity; 							
+	private double x;
+    private double y;
+    private double angle;
+    private double xVelocity;
+    private double yVelocity;
+    private double acceleration;
+    private final double velocityDecay;
+    private final double rotationalSpeed;
+    private double ammo;
+    private double max_ammo;
+    private double immunity;
 	private boolean turningLeft, turningRight, accelerating, active, shieldActive; 
-	private int shotDelay, shotDelayLeft; 
+	private final int shotDelay;
+    private int shotDelayLeft;
+    private int soundCoolDown;
 	
 	//Used for gfx:
 	private BufferedImage sprite = null;			//Hold the currently used image.
@@ -22,7 +35,10 @@ public class Ship {
 	private BufferedImage image_shipmoving = null;	//...
 	private BufferedImage shot = null;				//The shot image. (Actually imported two places, ill fix l8r)
 	private BufferedImage shield = null;			//The shield image.
-	
+    public BufferedImage smoke = null;			    //The smoke image.
+    AudioClip laserShoot = null;
+    AudioClip rocketMovement = null;
+
 	//Unlike other classes, most stats are hardcoded because we only need one ship:
 	public Ship(double x, double y, double max_ammo, double acceleration, boolean shieldStatus){ 
 		loadImage();							//loads in the images.
@@ -31,7 +47,7 @@ public class Ship {
 		this.angle=0; 							//not built around 360 system - i h8 linear algebra aparrently :(.
 		this.acceleration=acceleration; 
 		this.velocityDecay=0.995;
-		this.rotationalSpeed=0.03; 
+		this.rotationalSpeed=0.033;
 		this.shotDelay=15; 						//# of frames between shots
 		this.ammo=0;
 		this.max_ammo=max_ammo;
@@ -46,13 +62,13 @@ public class Ship {
 		active=false; 							//start game as paused 
 	}
 	
-	public void draw(Graphics g){ 
+	public void draw(Graphics g){
 		//Sets the proper image, depending on movement:
 		if (accelerating)
-			sprite=image_shipmoving;
+            sprite = image_shipmoving;
 		else
-			sprite=image_ship;
-		
+            sprite = image_ship;
+
 		//Handles rotation of the image:
 		double rotationRequired = angle;
 		double locationX = sprite.getWidth() / 2;
@@ -88,7 +104,14 @@ public class Ship {
 		//Adds acceleration to velocity in direction pointed:
 		if(accelerating){ 										
 			xVelocity+=acceleration*Math.cos(angle); 
-			yVelocity+=acceleration*Math.sin(angle); 
+			yVelocity+=acceleration*Math.sin(angle);
+            if(soundCoolDown <= 0) {
+                playSound(rocketMovement);
+                soundCoolDown = 60;
+            }
+            else
+                soundCoolDown-=1;
+
 		} 
 		
 		//Moving the coordinates based on velocity:
@@ -113,33 +136,41 @@ public class Ship {
 	public Shot shoot() {
 		shotDelayLeft=shotDelay; 								//set delay till next shot can be fired
 		ammo+=10;
-		return new Shot(x+10,y+14,angle,xVelocity,yVelocity,40,shot); 
+        playSound(laserShoot);
+		return new Shot(x+10,y+14,angle,xVelocity,yVelocity,40,shot);
 	}
+
+    private void playSound(AudioClip sound){
+        sound.stop();
+        sound.play();
+    }
+
+    public Smoke smoke() {
+        return new Smoke(x+8,y+8,angle,smoke);
+    }
 	
-	public void loadImage(){
+	void loadImage(){
 		try {
 			// The ClassLoader.getResource() ensures we get the sprite
-			// from the appropriate place, this helps with deploying the game
-			// with things like webstart. 
-			URL url = this.getClass().getClassLoader().getResource("sprites/ship.gif");
-			image_ship = ImageIO.read(url);
-			url = this.getClass().getClassLoader().getResource("sprites/ship2.gif");
-			image_shipmoving = ImageIO.read(url);
-			url = this.getClass().getClassLoader().getResource("sprites/shot.gif");
-			shot = ImageIO.read(url);
-			url = this.getClass().getClassLoader().getResource("sprites/shield.png");
-			shield = ImageIO.read(url);
+			// from the appropriate place:
+			image_ship = ImageIO.read(this.getClass().getResource("sprites/ship.gif"));
+			image_shipmoving = ImageIO.read(this.getClass().getResource("sprites/ship2.gif"));
+			shield = ImageIO.read(this.getClass().getResource("sprites/shield.png"));
+            shot = ImageIO.read(this.getClass().getResource("sprites/shot.gif"));
+            smoke = ImageIO.read(this.getClass().getResource("sprites/smoke.png"));
+            laserShoot = Applet.newAudioClip(this.getClass().getResource("/wav/Laser_Shoot.wav"));
+            rocketMovement = Applet.newAudioClip(this.getClass().getResource("/wav/Rocket.wav"));
 
-		} catch (IOException e) {}
+		} catch (IOException ignored) {}
 	}
 
 	//Setters and getters mostly:
 	public void setAccelerating(boolean accelerating){ 
-		this.accelerating=accelerating; 						//start or stop accelerating the ship 
+		this.accelerating=accelerating;
 	} 
 
 	public void setTurningLeft(boolean turningLeft){ 
-		this.turningLeft=turningLeft; 							//start or stop turning the ship 
+		this.turningLeft=turningLeft;
 	} 
 
 	public void setTurningRight(boolean turningRight){ 
@@ -150,20 +181,17 @@ public class Ship {
 		return active; 
 	} 
 
-	public boolean canShoot(){ 
-		if(shotDelayLeft>0 || ammo>=max_ammo-10) 					//checks to see if the ship is ready to 
-			return false; 											//shoot again yet or if it needs to wait longer 
-		else 
-			return true; 
+	public boolean canShoot(){
+        return !(shotDelayLeft > 0 || ammo >= max_ammo - 10);
 	}	
 
 	public void setActive(boolean active){ 
-		this.active=active; 									//used when the game is paused or unpaused 
+		this.active=active;
 	} 
 	
-	public double getRadius(){ 
-		return radius; 											//returns radius of circle that approximates the ship 
-	} 
+	public double getRadius(){
+        return radius;
+    }
 	
 	public double getX(){ 
 		return x; 												
@@ -182,8 +210,8 @@ public class Ship {
 	}
 	
 	public void setShieldUpgrade(boolean status){
-		if (status==false)
-			immunity=10;
+		if (!status)
+			immunity=10; //10 frames immunity.
 		shieldActive=status;
 	}
 	
@@ -194,20 +222,21 @@ public class Ship {
 	public double getImmunity(){
 		return immunity;
 	}
+
+    public boolean getAccelerating(){
+        return accelerating;
+    }
 	
 	public double getInfo(String info){
-		if (info=="speed")
+		if (info.equals("speed"))
 			return acceleration;
-		if (info=="ammo")
+		if (info.equals("ammo"))
 			return max_ammo/10;
-		if (info=="shield"){
+		if (info.equals("shield")){
 			if (shieldActive)
 				return 1;
-			else
-				return 0;
 		}
-		else
-			return 0;
+		return 0;
 	}
 	
 	public double shotsLeft(){

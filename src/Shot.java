@@ -4,15 +4,16 @@ import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
 
 public class Shot {
-	
-	//The speed at which the shots move, in pixels per frame:
-	private final double shotSpeed=1.5; 
-	
-	//Variables used in movement:
-	private double x,y,xVelocity,yVelocity, angle; 
+
+    //Variables used in movement:
+	private double x;
+    private double y;
+    private final double xVelocity;
+    private final double yVelocity;
+    private final double angle;
 	private int lifeLeft;
 	
-	BufferedImage sprite = null;
+	private BufferedImage sprite = null;
 	
 	/* Definitions:
 	 * {X}{Y}		x and y location shot from (-20 is needed to get a perfect fit)
@@ -25,8 +26,9 @@ public class Shot {
 		this.y=y-20;
 		//Add the velocity of the ship to the shot velocity
 		//(so the shot's velocity is relative to the ship's velocity)
-		xVelocity=shotSpeed*Math.cos(angle)+shipXVel;
-		yVelocity=shotSpeed*Math.sin(angle)+shipYVel;
+        double shotSpeed = 2;
+        xVelocity= shotSpeed *Math.cos(angle)+shipXVel;
+		yVelocity= shotSpeed *Math.sin(angle)+shipYVel;
 		
 		this.angle = angle;
 		this.sprite = sprite;
