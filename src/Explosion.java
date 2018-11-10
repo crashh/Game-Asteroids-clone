@@ -1,4 +1,5 @@
-import java.applet.AudioClip;
+import com.sun.media.jfxmedia.AudioClip;
+
 import java.awt.Graphics;
 import java.awt.geom.AffineTransform;
 import java.awt.image.AffineTransformOp;
@@ -10,9 +11,9 @@ class Explosion {
     private final double y;
 	private double timeLeft;
 	private final BufferedImage sprite;
-    AudioClip asteroidBoom;
+    private AudioClip asteroidBoom;
 
-	public Explosion(double x, double y, BufferedImage sprite, AudioClip sound, int timeLeft){
+	public Explosion(double x, double y, BufferedImage sprite, com.sun.media.jfxmedia.AudioClip sound, int timeLeft){
 		this.x=x;
 		this.y=y;
 		this.timeLeft=timeLeft;				//Duration of explosion:

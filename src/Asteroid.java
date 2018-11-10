@@ -111,7 +111,7 @@ public class Asteroid {
 		//the area of this asteroid. Each smaller asteroid has one
 		//less hit left before being completely destroyed.
 		return new Asteroid(x,y,radius/Math.sqrt(numSplit),
-							minVelocity,maxVelocity,hitsLeft-1,numSplit, goldDrop+2, asteroid);
+							minVelocity,maxVelocity,hitsLeft-1,numSplit, goldDrop+1, asteroid);
 	}
 	
 	//Getters:

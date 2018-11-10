@@ -23,6 +23,7 @@ class Ship {
     private final double rotationalSpeed;
     private double ammo;
     private double max_ammo;
+    private boolean multishot;
     private double immunity;
 	private boolean turningLeft, turningRight, accelerating, active, shieldActive; 
 	private final int shotDelay;
@@ -50,6 +51,7 @@ class Ship {
 		this.rotationalSpeed=0.033;
 		this.shotDelay=15; 						//# of frames between shots
 		this.ammo=0;
+		this.multishot=false;
 		this.max_ammo=max_ammo;
 		this.shieldActive=shieldStatus;
 		shotDelayLeft=0; 						//ready to shoot 
@@ -58,7 +60,6 @@ class Ship {
 		turningLeft=false; 						
 		turningRight=false; 
 		accelerating=false;
-		shieldActive=false;
 		active=false; 							//start game as paused 
 	}
 	
@@ -187,8 +188,12 @@ class Ship {
 
 	public void setActive(boolean active){ 
 		this.active=active;
-	} 
-	
+	}
+
+	public void setImmunity(double duration){
+		this.immunity=duration;
+	}
+
 	public double getRadius(){
         return radius;
     }
@@ -208,8 +213,17 @@ class Ship {
 	public void setAmmoUpgrade(double upgrade){
 		max_ammo+=upgrade*10;
 	}
-	
-	public void setShieldUpgrade(boolean status){
+
+    public void setMultiShotUpgrade(boolean upgrade){
+        multishot=upgrade;
+    }
+
+    public boolean getMultiShotUpgrade(){
+        return multishot;
+    }
+
+
+    public void setShieldUpgrade(boolean status){
 		if (!status)
 			immunity=10; //10 frames immunity.
 		shieldActive=status;

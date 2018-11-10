@@ -1,31 +1,32 @@
-import java.applet.*;
-import java.awt.*; 
+import com.sun.media.jfxmedia.AudioClip;
+
+import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.text.DecimalFormat;
 import javax.imageio.ImageIO;
 
-public class Game extends Applet implements Runnable, KeyListener {
+public class Game extends Frame implements Runnable, KeyListener {
 
     private Thread thread;
 
 	private Dimension dim;									//stores the size of the back buffer
 	private Image img; 										//the back buffer object
-	private Graphics g; 									//used to draw on the back buffer
-	private BufferedImage background;
+    private BufferedImage background;
     private BufferedImage overlayImage;
     private BufferedImage asteroidImage;
     private BufferedImage goldImage;
     private BufferedImage shotImage;
     private BufferedImage exploImage;
-    AudioClip asteroidBoom = null;
+    private AudioClip asteroidBoom = null;
 	private Ship ship; 										//reference to the ship class
 	private Asteroid[] asteroids;							//array of asteroids
 	private Shot[] shots; 									//array of shots
     private Smoke[] smokes;						        	//array of smoke
 	private Explosion[] explosions;							//array of explosions
-    AudioClip theme = null;
+    private AudioClip theme = null;
 	
 	private double astRadius,minAstVel,maxAstVel;
 	private boolean paused, shooting; 						
@@ -40,11 +41,19 @@ public class Game extends Applet implements Runnable, KeyListener {
     private int numSmoke;
     private int smokeCntDown;
 
+    public static void main(String[] args) {
+		Game f = new Game ();
+		f.setSize(1280,720);
+		f.setVisible(true);
+		f.setLayout(new FlowLayout());
+		f.setResizable(false);
+	}
+
     /*
     * Constructor for the entire Game, sets all the values which can be used to tweak
     * different aspects of the game.
     * */
-	public void init(){
+	public Game(){
 		resize(1280,720);
 		shots=new Shot[25];							//more than 25 shots/explosions will crash the game.
 		explosions=new Explosion[35];
@@ -70,14 +79,17 @@ public class Game extends Applet implements Runnable, KeyListener {
 
 		addKeyListener(this);
 
+		this.setVisible(true);
+
 		//Setting up double buffering:
-		dim=getSize();
-		img=createImage(dim.width, dim.height);
-		g=img.getGraphics();
+        dim=this.getSize();
+        img=createImage(dim.width, dim.height);
 
 		try {
 			loadGFX();                              //loads all the images.
-		} catch (IOException e) {e.printStackTrace();}
+		} catch (IOException | URISyntaxException e) {
+			e.printStackTrace();
+		}
 
 		setUpNextLevel(); 							//ensures ship class is initiated before paint is.
 
@@ -120,15 +132,17 @@ public class Game extends Applet implements Runnable, KeyListener {
 		
 		//Create asteroids in random spots on the screen:
 		for(int i=0;i<numAsteroids;i++)
-			asteroids[i]=new Asteroid(Math.random()*dim.width, 
-									  Math.random()*dim.height,astRadius,minAstVel,maxAstVel,astNumHits,astNumSplit,1, asteroidImage);
+			asteroids[i]=new Asteroid(Math.random()*dim.width,
+									  Math.random()*dim.height,astRadius,minAstVel,maxAstVel,astNumHits,astNumSplit,0, asteroidImage);
 	}
 
     /*
     * Paints everything to the canvas:
     * */
 	public void paint(Graphics gfx){
+	    Graphics g = img.getGraphics();
 		g.drawImage(background, 0, 0, dim.width, dim.height, null);
+        paintComponents(g);
 
 		for(int i=0;i<numShots;i++) 				//loop calls draw() for each shot
 	    	shots[i].draw(g);
@@ -193,7 +207,7 @@ public class Game extends Applet implements Runnable, KeyListener {
 				
 				//Creating new shot entities:
 				if(shooting && ship.canShoot()){
-					shots[numShots]=ship.shoot();
+					shots[numShots] = ship.shoot();
 					numShots++;
 				}
 
@@ -278,7 +292,9 @@ public class Game extends Applet implements Runnable, KeyListener {
 				if(asteroids[i].shotCollision(shots[j])){
 					
 					//If the shot hit an asteroid, delete the shot:
-					//deleteShot(j);
+                    if (!ship.getMultiShotUpgrade()) {
+                        deleteShot(j);
+                    }
 
 					//Split the asteroid up if needed:
 					if(asteroids[i].getHitsLeft()>1){
@@ -298,7 +314,7 @@ public class Game extends Applet implements Runnable, KeyListener {
 		}
 	}
 	
-	private void loadGFX() throws IOException{
+	private void loadGFX() throws IOException, URISyntaxException {
         //OBS: this (this.getClass().getResource) works in IDE and on a webserver, NOT LOCALLY!
 		background = ImageIO.read(this.getClass().getResource("sprites/background3.jpg"));
 		overlayImage = ImageIO.read(this.getClass().getResource("sprites/overlayImage2.png"));
@@ -306,47 +322,52 @@ public class Game extends Applet implements Runnable, KeyListener {
 		goldImage = ImageIO.read(this.getClass().getResource("sprites/goldImage.gif"));
 		shotImage = ImageIO.read(this.getClass().getResource("sprites/shot.gif"));
 		exploImage = ImageIO.read(this.getClass().getResource("sprites/explo.gif"));
-        asteroidBoom = Applet.newAudioClip(this.getClass().getResource("wav/Boom.wav"));
+        asteroidBoom = AudioClip.load(this.getClass().getResource("wav/Boom.wav").toURI());
 	}
 	
 	private void drawGUI(){
-		//Draws LEVEL:
+        Graphics g = img.getGraphics();
+
+        //Draws LEVEL:
 		g.setColor(Color.red); 						
 		g.setFont(new Font("default", Font.BOLD, 16));
-		g.drawString("Level: " + level,25,25);
-        g.drawString("High Score: " + highScore,25,690);
+		g.drawString("Level: " + level,25,50);
+        g.drawString("High Score: " + highScore,25,740);
 		
 		//Draws AMMO:
         if ((ship.shotsLeft()/10) < 10)
 		    for(int i=1; i<=((ship.shotsLeft()/10)+0.1); i++){
-		    	g.drawImage(shotImage, (i*20)+5, 35, null);
+		    	g.drawImage(shotImage, (i*20)+5, 50, null);
 		    }
         else
             for(int i=1; i<=10; i++){
-                g.drawImage(shotImage, (i*20)+5, 35, null);
+                g.drawImage(shotImage, (i*20)+5, 50, null);
             }
 				
 		//Draws GOLD:
 		g.drawImage(goldImage, dim.width-130, 1, null);
-		g.drawString("Gold: " + gold,dim.width-100,20);
+		g.drawString("Gold: " + gold,dim.width-100,50);
 		
 		//Draws UPGRADES:
 		g.setFont(new Font("default", Font.PLAIN, 10));
 		DecimalFormat df = new DecimalFormat("#.###");
-		g.drawString("Speed: " + df.format(ship.getInfo("speed")) ,dim.width-100,35);	
-		g.drawString("Ammo: " + ship.getInfo("ammo"),dim.width-100,45);
+		g.drawString("Speed: " + df.format(ship.getInfo("speed")) ,dim.width-100,65);
+		g.drawString("Ammo: " + ship.getInfo("ammo"),dim.width-100,80);
 		
 		//Draws PAUSE-SCREEN:
 		if (!ship.isActive()){
 	   		g.drawImage(overlayImage, dim.width/2-(overlayImage.getWidth()/2), 25, null);
 		}
+        paintComponents(g);
 	}
 	
 	//Keylisteners:
 	public void keyPressed(KeyEvent e){ 
 		if(e.getKeyCode()==KeyEvent.VK_ENTER){ 
-			if(!ship.isActive() && !paused) 
-				ship.setActive(true); 
+			if(!ship.isActive() && !paused) {
+                ship.setImmunity(10);
+                ship.setActive(true);
+            }
 			else{ 
 				paused=!paused; 					//enter is the pause button 
 				if(paused) 							
@@ -378,26 +399,27 @@ public class Game extends Applet implements Runnable, KeyListener {
 			shooting=false;
 
 		if(e.getKeyCode()==KeyEvent.VK_1) //Speed
-			if (paused && gold>=10){
+			if ((paused || !ship.isActive()) && gold>=10){
 				gold-=10;
-				ship.setSpeedUpgrade(0.0025);
+				ship.setSpeedUpgrade(0.0005);
 			}
 		if(e.getKeyCode()==KeyEvent.VK_2) //Shield
-			if (paused && gold>=100){
+			if ((paused || !ship.isActive()) && gold>=100){
 				gold-=100;
 				ship.setShieldUpgrade(true);
 			}
 		if(e.getKeyCode()==KeyEvent.VK_3) //Ammo
-			if (paused && gold>=50){
+			if ((paused || !ship.isActive()) && gold>=50){
 				gold-=50;
 				ship.setAmmoUpgrade(1);
 			}
 		if(e.getKeyCode()==KeyEvent.VK_4) //Multishot
-			if (paused && gold>=200){
-				gold-=0;
+			if ((paused || !ship.isActive()) && gold>=200){
+				gold-=200;
+                ship.setMultiShotUpgrade(true);
 			}
 	}
-	
-	public void keyTyped(KeyEvent e){
-	} 
+
+    public void keyTyped(KeyEvent e){
+    }
 }
